@@ -15,7 +15,7 @@ static class Program
         Console.WriteLine("Welcome to test Skedge API project");
         // Connet to API and get Authentification Token
         Console.WriteLine("Initialization");
-        var client = ConnectToApiIpAndPort("localhost:5000"); // Use the right url to your Skedge Server here
+        var client = ConnectToApiIpAndPort("localhost:5000"); // Use the right url and port to your Skedge Server here
         SetAuthorisationHeaderIfNeeded(client);
 
         Console.WriteLine($"Authorization header: {client.DefaultRequestHeaders.Authorization}");
@@ -188,7 +188,7 @@ static class Program
         }
         else
         {
-            throw new Exception($"Failed to get entities: {response.StatusCode}");
+            throw new Exception($"Failed to get entity: {response.StatusCode}");
         }
     }
 
@@ -204,7 +204,7 @@ static class Program
         }
         else
         {
-            throw new Exception($"Failed to get entities: {response.StatusCode}");
+            throw new Exception($"Failed to get exercises: {response.StatusCode}");
         }
     }
 
