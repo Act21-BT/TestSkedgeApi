@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -20,6 +21,11 @@ static class Program
 
         Console.WriteLine($"Authorization header: {client.DefaultRequestHeaders.Authorization}");
 
+        if (client.DefaultRequestHeaders?.Authorization == null)
+        {
+            Console.WriteLine($"error in getting Authorization header");
+            return;
+        }
         // Test all API methode
         Console.WriteLine("*********** Test all API methods ***********");
         var lightOrganisms = await GetOrganisms(client);
@@ -66,7 +72,12 @@ static class Program
             {
                 Console.WriteLine($"exercise {exercise.Name} | {exercise.EntityComparaisonGroupName?.Count()?? 0} entity exercises");
             });
-            
+
+            Console.WriteLine("GetExerciseWithScores");
+            await GetExerciseWithScores(client);
+            Console.WriteLine("GetEntityExerciseWithScores");
+            await GetEntityExerciseWithScores(client);
+
         } else
         {
             Console.WriteLine("No organism visible for authentificated user");
@@ -75,9 +86,11 @@ static class Program
 
     private static HttpClient ConnectToApi(Uri apiUri)
     {
-        HttpClient client = new HttpClient();
-        // Update port # in the following line.
-        client.BaseAddress = new Uri("http://" + apiUri.Authority);
+        var handler = new HttpClientHandler();
+        handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+
+        HttpClient client = new HttpClient(handler);
+        client.BaseAddress = new Uri("https://" + apiUri.Authority);
         client.DefaultRequestHeaders.Accept.Clear();
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         return client;
@@ -85,7 +98,7 @@ static class Program
 
     private static HttpClient ConnectToApiIpAndPort(string ipAndPort)
     {
-        Uri apiUri = new Uri("http://" + ipAndPort);
+        Uri apiUri = new Uri("https://" + ipAndPort);
         return ConnectToApi(apiUri);
     }
 
@@ -116,6 +129,7 @@ static class Program
             string token = string.Empty;
             StringContent content = new StringContent(JsonConvert.SerializeObject(signInInfo), Encoding.UTF8, "application/json");
             var uri = new Uri(client.BaseAddress + "api/Account/signin");
+            Console.WriteLine("signIn uri: " + uri.ToString());
             HttpResponseMessage response;
             response = client.PostAsync(uri, content).Result;
             if (response.IsSuccessStatusCode)
@@ -146,7 +160,7 @@ static class Program
     #region requests
     public static async Task<List<OrganismLightClientDto>> GetOrganisms(HttpClient client)
     {
-        var response = await client.GetAsync("/api/ClientAccess/organisms");
+        var response = await client.GetAsync("/api/ClientAccess/organisms?culture=en");
 
         if (response.IsSuccessStatusCode)
         {
@@ -162,7 +176,7 @@ static class Program
 
     public static async Task<List<EntityLightClientDto>> GetEntitiesByOrganism(int organismId, HttpClient client)
     {
-        var response = await client.GetAsync("/api/ClientAccess/organism/" + organismId.ToString() + "/entities");
+        var response = await client.GetAsync("/api/ClientAccess/organism/" + organismId.ToString() + "/entities?culture=en");
 
         if (response.IsSuccessStatusCode)
         {
@@ -201,6 +215,42 @@ static class Program
             var content = await response.Content.ReadAsStringAsync();
             var exercises = JsonConvert.DeserializeObject<List<ExerciseWithEntityExerciseClientDto>>(content);
             return exercises;
+        }
+        else
+        {
+            throw new Exception($"Failed to get exercises: {response.StatusCode}");
+        }
+    }
+
+    public static async Task<string> GetExerciseWithScores(HttpClient client, int organismId = 0, int exerciseId = 0)
+    {
+        var response = await client.GetAsync("/api/ClientAccess/organism/" + organismId.ToString() + "/exercise/" + exerciseId.ToString());
+
+        if (response.IsSuccessStatusCode)
+        {
+            Console.WriteLine("GetExerciseWithScores");
+            var content = await response.Content.ReadAsStringAsync();
+            Console.WriteLine(response.StatusCode.ToString());
+            Console.WriteLine(content);
+            return content;
+        }
+        else
+        {
+            throw new Exception($"Failed to get exercises: {response.StatusCode}");
+        }
+    }
+
+    public static async Task<string> GetEntityExerciseWithScores(HttpClient client, int organismId = 0, int entityExerciseId = 0)
+    {
+        var response = await client.GetAsync("/api/ClientAccess/organism/" + organismId.ToString() + "/entity-exercise/" + entityExerciseId.ToString());
+
+        if (response.IsSuccessStatusCode)
+        {
+            Console.WriteLine("GetEntityExerciseWithScores");
+            var content = await response.Content.ReadAsStringAsync();
+            Console.WriteLine(response.StatusCode.ToString());
+            Console.WriteLine(content);
+            return content;
         }
         else
         {
